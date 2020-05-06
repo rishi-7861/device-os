@@ -370,8 +370,8 @@ uint32_t HAL_I2C_Request_Data(HAL_I2C_Interface i2c, uint8_t address, uint8_t qu
 int32_t HAL_I2C_Request_Data_Ex(HAL_I2C_Interface i2c, const HAL_I2C_Transmission_Config* config, void* reserved) {
     HAL_I2C_Acquire(i2c, NULL);
 
-    uint32_t err_code;
     size_t quantity = 0;
+    int error_or_size = 0;
 
     if (!config) {
         goto ret;
@@ -384,20 +384,27 @@ int32_t HAL_I2C_Request_Data_Ex(HAL_I2C_Interface i2c, const HAL_I2C_Transmissio
         quantity = m_i2c_map[i2c].rx_buf_size;
     }
 
+    if (quantity == 0) {
+        goto ret;
+    }
+
     m_i2c_map[i2c].transfer_state = TRANSFER_STATE_BUSY;
-    err_code = nrfx_twim_rx(m_i2c_map[i2c].master, config->address, (uint8_t *)m_i2c_map[i2c].rx_buf, quantity);
-    if (err_code) {
+    if (nrfx_twim_rx(m_i2c_map[i2c].master, config->address, (uint8_t *)m_i2c_map[i2c].rx_buf, quantity)) {
         // FIXME: There is a bug in nrfx_twim driver, if we call nrfx_twim_rx repeatedly and quickly,
         // p_cb->busy will be set and never cleared, in this case nrfx_twim_rx always returns busy error
         LOG_DEBUG(TRACE, "BUSY ERROR, restore twi.");
         HAL_I2C_Reset(i2c, 0, nullptr);
         quantity = 0;
+        error_or_size = SYSTEM_ERROR_INTERNAL;
         goto ret;
+    } else {
+        error_or_size = quantity;
     }
 
     if (!WAIT_TIMED(config->timeout_ms, m_i2c_map[i2c].transfer_state == TRANSFER_STATE_BUSY)) {
         HAL_I2C_Reset(i2c, 0, nullptr);
         quantity = 0;
+        error_or_size = SYSTEM_ERROR_TIMEOUT;
         goto ret;
     }
 
@@ -405,6 +412,7 @@ int32_t HAL_I2C_Request_Data_Ex(HAL_I2C_Interface i2c, const HAL_I2C_Transmissio
         // Get into error state
         HAL_I2C_Reset(i2c, 0, nullptr);
         quantity = 0;
+        error_or_size = SYSTEM_ERROR_INVALID_STATE;
         goto ret;
     }
 
@@ -413,7 +421,7 @@ ret:
     m_i2c_map[i2c].rx_index_head = 0;
     m_i2c_map[i2c].rx_index_tail = quantity;
     HAL_I2C_Release(i2c, NULL);
-    return quantity;
+    return error_or_size;
 }
 
 void HAL_I2C_Begin_Transmission(HAL_I2C_Interface i2c, uint8_t address, const HAL_I2C_Transmission_Config* config) {

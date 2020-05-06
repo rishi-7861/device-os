@@ -485,7 +485,7 @@ int32_t HAL_I2C_Request_Data_Ex(HAL_I2C_Interface i2c, const HAL_I2C_Transmissio
             /* SW Reset the I2C Peripheral */
             HAL_I2C_SoftwareReset(i2c);
             HAL_I2C_Release(i2c, NULL);
-            return 0;
+            return SYSTEM_ERROR_TIMEOUT;
         }
 
         /* Send START condition */
@@ -496,7 +496,7 @@ int32_t HAL_I2C_Request_Data_Ex(HAL_I2C_Interface i2c, const HAL_I2C_Transmissio
             /* SW Reset the I2C Peripheral */
             HAL_I2C_SoftwareReset(i2c);
             HAL_I2C_Release(i2c, NULL);
-            return 0;
+            return SYSTEM_ERROR_TIMEOUT;
         }
 
     }
@@ -529,7 +529,7 @@ int32_t HAL_I2C_Request_Data_Ex(HAL_I2C_Interface i2c, const HAL_I2C_Transmissio
         /* Ensure ackFailure flag is cleared */
         i2cMap[i2c]->ackFailure = false;
         HAL_I2C_Release(i2c, NULL);
-        return 0;
+        return SYSTEM_ERROR_TIMEOUT;
     }
 
     if (quantity == 1)
@@ -540,9 +540,13 @@ int32_t HAL_I2C_Request_Data_Ex(HAL_I2C_Interface i2c, const HAL_I2C_Transmissio
         // Clear I2C_FLAG_ADDR flag by reading SR2
         (void)i2cMap[i2c]->I2C_Peripheral->SR2;
         if (config->flags & HAL_I2C_TRANSMISSION_FLAG_STOP)
+        {
             I2C_GenerateSTOP(i2cMap[i2c]->I2C_Peripheral, ENABLE);
+        }
         else
+        {
             I2C_GenerateSTART(i2cMap[i2c]->I2C_Peripheral, ENABLE);
+        }
         HAL_enable_irq(state);
 
         // Wait for RXNE
@@ -551,7 +555,7 @@ int32_t HAL_I2C_Request_Data_Ex(HAL_I2C_Interface i2c, const HAL_I2C_Transmissio
             /* SW Reset the I2C Peripheral */
             HAL_I2C_SoftwareReset(i2c);
             HAL_I2C_Release(i2c, NULL);
-            return 0;
+            return SYSTEM_ERROR_TIMEOUT;
         }
 
         *(pBuffer++) = I2C_ReceiveData(i2cMap[i2c]->I2C_Peripheral);
@@ -572,14 +576,18 @@ int32_t HAL_I2C_Request_Data_Ex(HAL_I2C_Interface i2c, const HAL_I2C_Transmissio
             /* SW Reset the I2C Peripheral */
             HAL_I2C_SoftwareReset(i2c);
             HAL_I2C_Release(i2c, NULL);
-            return 0;
+            return SYSTEM_ERROR_TIMEOUT;
         }
 
         state = HAL_disable_irq();
         if (config->flags & HAL_I2C_TRANSMISSION_FLAG_STOP)
+        {
             I2C_GenerateSTOP(i2cMap[i2c]->I2C_Peripheral, ENABLE);
+        }
         else
+        {
             I2C_GenerateSTART(i2cMap[i2c]->I2C_Peripheral, ENABLE);
+        }
 
         *(pBuffer++) = I2C_ReceiveData(i2cMap[i2c]->I2C_Peripheral);
         HAL_enable_irq(state);
@@ -611,7 +619,7 @@ int32_t HAL_I2C_Request_Data_Ex(HAL_I2C_Interface i2c, const HAL_I2C_Transmissio
                 /* SW Reset the I2C Peripheral */
                 HAL_I2C_SoftwareReset(i2c);
                 HAL_I2C_Release(i2c, NULL);
-                return 0;
+                return SYSTEM_ERROR_TIMEOUT;
             }
 
             *(pBuffer++) = I2C_ReceiveData(i2cMap[i2c]->I2C_Peripheral);
@@ -625,7 +633,7 @@ int32_t HAL_I2C_Request_Data_Ex(HAL_I2C_Interface i2c, const HAL_I2C_Transmissio
             /* SW Reset the I2C Peripheral */
             HAL_I2C_SoftwareReset(i2c);
             HAL_I2C_Release(i2c, NULL);
-            return 0;
+            return SYSTEM_ERROR_TIMEOUT;
         }
 
         I2C_AcknowledgeConfig(i2cMap[i2c]->I2C_Peripheral, DISABLE);
@@ -637,13 +645,17 @@ int32_t HAL_I2C_Request_Data_Ex(HAL_I2C_Interface i2c, const HAL_I2C_Transmissio
             /* SW Reset the I2C Peripheral */
             HAL_I2C_SoftwareReset(i2c);
             HAL_I2C_Release(i2c, NULL);
-            return 0;
+            return SYSTEM_ERROR_TIMEOUT;
         }
 
         if (config->flags & HAL_I2C_TRANSMISSION_FLAG_STOP)
+        {
             I2C_GenerateSTOP(i2cMap[i2c]->I2C_Peripheral, ENABLE);
+        }
         else
+        {
             I2C_GenerateSTART(i2cMap[i2c]->I2C_Peripheral, ENABLE);
+        }
 
         // Byte N-1
         *(pBuffer++) = I2C_ReceiveData(i2cMap[i2c]->I2C_Peripheral);
@@ -660,9 +672,13 @@ int32_t HAL_I2C_Request_Data_Ex(HAL_I2C_Interface i2c, const HAL_I2C_Transmissio
         // Clear I2C_FLAG_ADDR flag by reading SR2
         (void)i2cMap[i2c]->I2C_Peripheral->SR2;
         if (config->flags & HAL_I2C_TRANSMISSION_FLAG_STOP)
+        {
             I2C_GenerateSTOP(i2cMap[i2c]->I2C_Peripheral, ENABLE);
+        }
         else
+        {
             I2C_GenerateSTART(i2cMap[i2c]->I2C_Peripheral, ENABLE);
+        }
     }
 
     if (config->flags & HAL_I2C_TRANSMISSION_FLAG_STOP)
@@ -673,7 +689,7 @@ int32_t HAL_I2C_Request_Data_Ex(HAL_I2C_Interface i2c, const HAL_I2C_Transmissio
             /* SW Reset the I2C Peripheral */
             HAL_I2C_SoftwareReset(i2c);
             HAL_I2C_Release(i2c, NULL);
-            return 0;
+            return SYSTEM_ERROR_TIMEOUT;
         }
         i2cMap[i2c]->prevEnding = I2C_ENDING_STOP;
     }
@@ -686,7 +702,7 @@ int32_t HAL_I2C_Request_Data_Ex(HAL_I2C_Interface i2c, const HAL_I2C_Transmissio
             /* SW Reset the I2C Peripheral */
             HAL_I2C_SoftwareReset(i2c);
             HAL_I2C_Release(i2c, NULL);
-            return 0;
+            return SYSTEM_ERROR_TIMEOUT;
         }
     }
 

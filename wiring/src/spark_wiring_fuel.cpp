@@ -108,7 +108,7 @@ float FuelGauge::getVCell() {
 	byte MSB = 0;
 	byte LSB = 0;
 
-	readRegister(VCELL_REGISTER, MSB, LSB);
+	CHECK(readRegister(VCELL_REGISTER, MSB, LSB));
 	return detail::_getVCell(MSB, LSB);
 }
 
@@ -118,7 +118,7 @@ float FuelGauge::getSoC() {
 	byte MSB = 0;
 	byte LSB = 0;
 
-	readRegister(SOC_REGISTER, MSB, LSB);
+	CHECK(readRegister(SOC_REGISTER, MSB, LSB));
 	return detail::_getSoC(MSB, LSB);
 }
 
@@ -157,118 +157,122 @@ int FuelGauge::getVersion() {
 	byte MSB = 0;
 	byte LSB = 0;
 
-	readRegister(VERSION_REGISTER, MSB, LSB);
+	CHECK(readRegister(VERSION_REGISTER, MSB, LSB));
 	return (MSB << 8) | LSB;
 }
 
 byte FuelGauge::getCompensateValue() {
-
 	byte MSB = 0;
 	byte LSB = 0;
 
-	readConfigRegister(MSB, LSB);
+	if (readConfigRegister(MSB, LSB) != SYSTEM_ERROR_NONE) {
+        return 0xFF;
+    }
 	return MSB;
 }
 
 byte FuelGauge::getAlertThreshold() {
-
 	byte MSB = 0;
 	byte LSB = 0;
 
-	readConfigRegister(MSB, LSB);
+	if (readConfigRegister(MSB, LSB) != SYSTEM_ERROR_NONE) {
+        return 0xFF;
+    }
 	return 32 - (LSB & 0x1F);
 }
 
-void FuelGauge::setAlertThreshold(byte threshold) {
-
+int FuelGauge::setAlertThreshold(byte threshold) {
 	byte MSB = 0;
 	byte LSB = 0;
 
-	readConfigRegister(MSB, LSB);
-	if(threshold > 32) threshold = 32;
+	CHECK(readConfigRegister(MSB, LSB));
+	if(threshold > 32) {
+        threshold = 32;
+    }
 	threshold = 32 - threshold;
 
-	writeRegister(CONFIG_REGISTER, MSB, (LSB & 0xE0) | threshold);
+	CHECK(writeRegister(CONFIG_REGISTER, MSB, (LSB & 0xE0) | threshold));
+    return SYSTEM_ERROR_NONE;
 }
 
 // Check if alert interrupt was generated
 boolean FuelGauge::getAlert() {
-
 	byte MSB = 0;
 	byte LSB = 0;
 
-	readConfigRegister(MSB, LSB);
+	if (readConfigRegister(MSB, LSB) != SYSTEM_ERROR_NONE) {
+        return false;
+    }
 	return LSB & 0x20;
 }
 
-void FuelGauge::clearAlert() {
-
+int FuelGauge::clearAlert() {
 	byte MSB = 0;
 	byte LSB = 0;
 
-	readConfigRegister(MSB, LSB);
-
+	CHECK(readConfigRegister(MSB, LSB));
 	// Clear ALRT bit
-    writeRegister(CONFIG_REGISTER, MSB, LSB & ~(0x20));
+    CHECK(writeRegister(CONFIG_REGISTER, MSB, LSB & ~(0x20)));
+    return SYSTEM_ERROR_NONE;
 }
 
-void FuelGauge::reset() {
-
-	writeRegister(COMMAND_REGISTER, 0x00, 0x54);
+int FuelGauge::reset() {
+	CHECK(writeRegister(COMMAND_REGISTER, 0x00, 0x54));
+    return SYSTEM_ERROR_NONE;
 }
 
-void FuelGauge::quickStart() {
-
-	writeRegister(MODE_REGISTER, 0x40, 0x00);
+int FuelGauge::quickStart() {
+	CHECK(writeRegister(MODE_REGISTER, 0x40, 0x00));
+    return SYSTEM_ERROR_NONE;
 }
 
-void FuelGauge::sleep() {
-
+int FuelGauge::sleep() {
     std::lock_guard<FuelGauge> l(*this);
 	byte MSB = 0;
 	byte LSB = 0;
 
-	readConfigRegister(MSB, LSB);
-
-	writeRegister(CONFIG_REGISTER, MSB, (LSB | 0b10000000));
-
+	CHECK(readConfigRegister(MSB, LSB));
+	CHECK(writeRegister(CONFIG_REGISTER, MSB, (LSB | 0b10000000)));
+    return SYSTEM_ERROR_NONE;
 }
 
-void FuelGauge::wakeup() {
+int FuelGauge::wakeup() {
     std::lock_guard<FuelGauge> l(*this);
 	byte MSB = 0;
 	byte LSB = 0;
 
-	readConfigRegister(MSB, LSB);
-
-	writeRegister(CONFIG_REGISTER, MSB, (LSB & 0b01111111));
-
+	CHECK(readConfigRegister(MSB, LSB));
+	CHECK(writeRegister(CONFIG_REGISTER, MSB, (LSB & 0b01111111)));
+    return SYSTEM_ERROR_NONE;
 }
 
 
-void FuelGauge::readConfigRegister(byte &MSB, byte &LSB) {
-	readRegister(CONFIG_REGISTER, MSB, LSB);
+int FuelGauge::readConfigRegister(byte &MSB, byte &LSB) {
+	return readRegister(CONFIG_REGISTER, MSB, LSB);
 }
 
 
-void FuelGauge::readRegister(byte startAddress, byte &MSB, byte &LSB) {
+int FuelGauge::readRegister(byte startAddress, byte &MSB, byte &LSB) {
     std::lock_guard<FuelGauge> l(*this);
     i2c_.beginTransmission(MAX17043_ADDRESS);
     i2c_.write(startAddress);
-    i2c_.endTransmission(true);
+    CHECK_TRUE(i2c_.endTransmission(true) == 0, SYSTEM_ERROR_TIMEOUT);
 
-    i2c_.requestFrom(MAX17043_ADDRESS, 2, true);
+    CHECK_TRUE(i2c_.requestFrom(MAX17043_ADDRESS, 2, true) == 2, SYSTEM_ERROR_TIMEOUT);
     MSB = i2c_.read();
     LSB = i2c_.read();
+
+    return SYSTEM_ERROR_NONE;
 }
 
-void FuelGauge::writeRegister(byte address, byte MSB, byte LSB) {
+int FuelGauge::writeRegister(byte address, byte MSB, byte LSB) {
     std::lock_guard<FuelGauge> l(*this);
     i2c_.beginTransmission(MAX17043_ADDRESS);
     i2c_.write(address);
     i2c_.write(MSB);
     i2c_.write(LSB);
-    i2c_.endTransmission(true);
+    CHECK_TRUE(i2c_.endTransmission(true) == 0, SYSTEM_ERROR_TIMEOUT);
+    return SYSTEM_ERROR_NONE;
 }
 
 bool FuelGauge::lock() {
